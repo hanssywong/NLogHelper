@@ -105,8 +105,6 @@ namespace NLogHelper
             isInitialized = true;
 
             logger.Info("Program Started!");
-            queue.LogError = logger.Error;
-            queue.LogInfo = logger.Info;
         }
 
         public void Init(string DirectoryPath, string LogName, LogLevel lv, long MaximumFileSize = 1024 * 1024 * 20)
