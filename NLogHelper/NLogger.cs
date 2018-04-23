@@ -55,9 +55,9 @@ namespace NLogHelper
             var fileTarget = new FileTarget();
             config.AddTarget(LogName, fileTarget);
 
-            // Step 3. Set target properties 
-            fileTarget.Layout = "${longdate}|${level:uppercase=true}\t|${logger}|${message}";
-            fileTarget.FileName = DirectoryPath + "/" + LogName + ".log";
+			// Step 3. Set target properties 
+			fileTarget.Layout = "${message}";
+			fileTarget.FileName = DirectoryPath + "/" + LogName + ".log";
             fileTarget.ArchiveAboveSize = MaximumFileSize;
             fileTarget.ArchiveEvery = FileArchivePeriod.Day;
             fileTarget.ArchiveFileName = DirectoryPath + "/${shortdate}/" + LogName + "_{#}.log";
@@ -65,7 +65,7 @@ namespace NLogHelper
             fileTarget.MaxArchiveFiles = 1000;
             fileTarget.Encoding = encoding;
 
-            NLog.LogLevel lv = NLog.LogLevel.Debug;
+			NLog.LogLevel lv = NLog.LogLevel.Debug;
             if (loglevel == LogLevel.Debug)
                 lv = NLog.LogLevel.Debug;
             else if (loglevel == LogLevel.Error)
@@ -87,10 +87,7 @@ namespace NLogHelper
 
             // Step 5. Activate the configuration
             LogManager.Configuration = config;
-
-            // Example usage
             logger = LogManager.GetLogger(LogName);
-
             writethread.Add(Task.Factory.StartNew(() => WriteToFile(), TaskCreationOptions.LongRunning));
 
             TaskScheduler.UnobservedTaskException += (sender, args) =>
@@ -104,7 +101,7 @@ namespace NLogHelper
 
             isInitialized = true;
 
-            logger.Info("Program Started!");
+            logger.Info(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff Program Started!"));
         }
 
         public void Init(string DirectoryPath, string LogName, LogLevel lv, long MaximumFileSize = 1024 * 1024 * 20)
@@ -140,7 +137,6 @@ namespace NLogHelper
                     try
                     {
                         NLogMsg logmsg = Pool.Checkout();
-                        //LogMsgClass logmsg = new LogMsgClass();
 
                         if (logmsg == null)
                         {
@@ -149,7 +145,7 @@ namespace NLogHelper
                         }
 
                         logmsg.level = level;
-                        logmsg.msg = string.Format("({0}) {1}", Thread.CurrentThread.ManagedThreadId.ToString(), msg);
+						logmsg.msg = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + "|" + level + "|" + Thread.CurrentThread.ManagedThreadId + " " + msg;
 
                         queue.Enqueue(logmsg);
                     }
@@ -163,37 +159,31 @@ namespace NLogHelper
 
         private void WriteToFile()
         {
-            while (isRunning || !queue.IsQueueEmpty)
+			StringBuilder sb = new StringBuilder();
+			NLogMsg logmsg = null;
+
+			while (isRunning || !queue.IsQueueEmpty)
             {
-                NLogMsg logmsg = null;
                 try
                 {
-                    if (!queue.TryDequeue(out logmsg)) continue;
-                    if (logmsg.level == LogLevel.Error)
-                    {
-                        logger.Error(logmsg.msg);
-                    }
-                    else if (logmsg.level == LogLevel.Info)
-                    {
-                        logger.Info(logmsg.msg);
-                    }
-                    else if (logmsg.level == LogLevel.Debug)
-                    {
-                        logger.Debug(logmsg.msg);
-                    }
-                    else if (logmsg.level == LogLevel.Fatal)
-                    {
-                        logger.Fatal(logmsg.msg);
-                    }
-                    else if (logmsg.level == LogLevel.Trace)
-                    {
-                        logger.Trace(logmsg.msg);
-                    }
-                    else if (logmsg.level == LogLevel.Warn)
-                    {
-                        logger.Warn(logmsg.msg);
-                    }
-                }
+					sb.Clear();
+					bool gotItem = true;
+					while (gotItem)
+					{
+						gotItem = queue.TryDequeue(out logmsg);
+						if (gotItem && logmsg != null && !string.IsNullOrEmpty(logmsg.msg))
+						{
+							if (sb.Length > 0)
+								sb.AppendLine();
+							sb.Append(logmsg.msg);
+						}
+						if (sb.Length > 1024 * 1024 || queue.IsQueueEmpty)
+							break;
+					}
+
+					if (sb.Length > 0)
+						logger.Info(sb.ToString());
+				}
                 catch (OperationCanceledException)
                 {
                     logger.Info("LibraryLogger Shutdown in progress");
@@ -219,7 +209,7 @@ namespace NLogHelper
                 isRunning = false;
                 queue.ShutdownGracefully();
                 Task.WaitAll(writethread.ToArray());
-                logger.Info("LibraryLogger Shutdown");
+                logger.Info(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff LibraryLogger Shutdown"));
                 queue.Dispose();
             }
         }
