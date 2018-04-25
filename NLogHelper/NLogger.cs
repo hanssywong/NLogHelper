@@ -101,7 +101,7 @@ namespace NLogHelper
 
             isInitialized = true;
 
-            logger.Info(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff Program Started!"));
+			logger.Info(msgWithTime(" Program Started!"));
         }
 
         public void Init(string DirectoryPath, string LogName, LogLevel lv, long MaximumFileSize = 1024 * 1024 * 20)
@@ -140,7 +140,7 @@ namespace NLogHelper
 
                         if (logmsg == null)
                         {
-                            logger.Fatal("LibraryLogger logmsg == null");
+                            logger.Fatal(msgWithTime("LibraryLogger logmsg == null"));
                             return;
                         }
 
@@ -151,7 +151,7 @@ namespace NLogHelper
                     }
                     catch (Exception ex)
                     {
-                        logger.Fatal(ex, "LibraryLogger Exception");
+                        logger.Fatal(ex, msgWithTime("LibraryLogger Exception"));
                     }
                 }
             }
@@ -186,11 +186,11 @@ namespace NLogHelper
 				}
                 catch (OperationCanceledException)
                 {
-                    logger.Info("LibraryLogger Shutdown in progress");
+                    logger.Info(msgWithTime("LibraryLogger Shutdown in progress"));
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(ex, "LibraryLogger Exception");
+                    logger.Error(ex, msgWithTime("LibraryLogger Exception"));
                 }
                 finally
                 {
@@ -202,6 +202,10 @@ namespace NLogHelper
             }
         }
 
+		private string msgWithTime(string msg)
+		{
+			return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + msg;
+		}
         public void Shutdown()
         {
             if (logger != null)
@@ -209,8 +213,8 @@ namespace NLogHelper
                 isRunning = false;
                 queue.ShutdownGracefully();
                 Task.WaitAll(writethread.ToArray());
-                logger.Info(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff LibraryLogger Shutdown"));
-                queue.Dispose();
+				logger.Info(msgWithTime("LibraryLogger Shutdown"));
+				queue.Dispose();
             }
         }
     }
