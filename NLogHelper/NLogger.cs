@@ -177,7 +177,12 @@ namespace NLogHelper
 								sb.AppendLine();
 							sb.Append(logmsg.msg);
 						}
-						if (sb.Length > 1024 * 1024 || queue.IsQueueEmpty)
+                        if (logmsg != null)
+                        {
+                            Pool.Checkin(logmsg);
+                            logmsg = null;
+                        }
+                        if (sb.Length > 1024 * 1024 || queue.IsQueueEmpty)
 							break;
 					}
 
@@ -197,6 +202,7 @@ namespace NLogHelper
                     if (logmsg != null)
                     {
                         Pool.Checkin(logmsg);
+                        logmsg = null;
                     }
                 }
             }
